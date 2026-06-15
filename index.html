@@ -1,303 +1,1231 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>My Travel Globe</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Valentina's travel album</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  :root { color-scheme: dark; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; background: #000; color: #e6e6e6;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    overflow: hidden; }
-  #app { position: fixed; inset: 0; display: flex; flex-direction: column; }
-  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; z-index: 5; pointer-events: none; }
-  header .title { font-size: 16px; font-weight: 500; letter-spacing: .3px; }
-  header .spacer { flex: 1; }
-  header .stat { font-size: 13px; color: #777; pointer-events: auto; }
-  header label { font-size: 13px; color: #777; pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-  #stage { flex: 1; position: relative; }
-  canvas { display: block; cursor: grab; touch-action: none; }
-  canvas:active { cursor: grabbing; }
-  #hint { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); font-size: 12.5px; color: #555; pointer-events: none; transition: opacity .4s; }
-  #tooltip { position: absolute; padding: 4px 9px; font-size: 12.5px; color: #fff; background: rgba(0,0,0,.8); border: .5px solid #333; border-radius: 6px; pointer-events: none; transform: translate(-50%,-150%); opacity: 0; transition: opacity .12s; white-space: nowrap; z-index: 6; }
-  .overlay { position: absolute; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 10; }
-  .overlay.open { display: flex; }
-  .modal { background: #0c0c0c; border: .5px solid #2a2a2a; border-radius: 14px; width: 380px; max-width: 90vw; max-height: 86vh; overflow: auto; padding: 20px; }
-  .modal h2 { font-size: 18px; font-weight: 500; }
-  .modal .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .closeBtn { background: transparent; border: .5px solid #333; color: #aaa; border-radius: 8px; padding: 5px 9px; cursor: pointer; font-size: 14px; }
-  .closeBtn:hover { background: #1a1a1a; }
-  .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 14px 0; }
-  .grid .ph { aspect-ratio: 1; border-radius: 8px; background: #1a1a1a; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
-  .grid .ph img { width: 100%; height: 100%; object-fit: cover; }
-  .empty { font-size: 13.5px; color: #888; margin: 6px 0 16px; line-height: 1.6; }
-  .addBtn { width: 100%; background: #fff; border: none; color: #000; font-weight: 600; padding: 11px; border-radius: 9px; cursor: pointer; font-size: 14px; }
-  .addBtn:hover { background: #ddd; }
-  .addBtn:disabled { background: #444; color: #888; cursor: wait; }
-  .status { font-size: 12px; color: #888; margin-top: 8px; min-height: 16px; text-align: center; }
-  #loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #555; font-size: 14px; z-index: 4; text-align: center; padding: 0 20px; }
+:root {
+  --bg: #07070a;
+  --bg-2: #0d0d11;
+  --ink: #f4f1ea;
+  --ink-dim: #8a8780;
+  --ink-faint: #46443f;
+  --line: rgba(244, 241, 234, 0.08);
+  --line-2: rgba(244, 241, 234, 0.16);
+  --accent: #f4f1ea;
+  --visited: #e8e2d3;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: 'Inter', system-ui, sans-serif; overflow: hidden; height: 100%; }
+body {
+  background-image:
+    radial-gradient(ellipse at 50% 50%, #111114 0%, #07070a 70%, #050507 100%);
+}
+
+/* film grain */
+body::after {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: screen;
+}
+
+#root { position: fixed; inset: 0; }
+
+/* canvas — globe */
+#globe { position: absolute; inset: 0; cursor: grab; }
+#globe.dragging { cursor: grabbing; }
+#globe.hovering { cursor: pointer; }
+
+/* header */
+.chrome { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+.chrome > * { pointer-events: auto; }
+
+.brand {
+  position: absolute;
+  top: 28px; left: 36px;
+  display: flex; align-items: center; gap: 14px;
+  transform-origin: center;
+  will-change: transform, top, left;
+  backface-visibility: hidden;
+  transition: top 1.8s cubic-bezier(0.65, 0, 0.35, 1),
+              left 1.8s cubic-bezier(0.65, 0, 0.35, 1),
+              transform 1.8s cubic-bezier(0.65, 0, 0.35, 1);
+  z-index: 11;
+}
+.brand.landing {
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(4.5);
+  white-space: nowrap;
+}
+
+.chrome > *:not(.brand) {
+  transition: opacity 0.9s ease 1.1s;
+}
+.chrome.is-landing > *:not(.brand) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease 0s;
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1; }
+.brand-name { font-family: 'Geist', 'Inter', system-ui, sans-serif; font-weight: 500; font-size: 22px; letter-spacing: 0; line-height: 1; text-transform: none; }
+.brand-name span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: brand-char-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: calc(var(--i) * 22ms + 80ms);
+}
+@keyframes brand-char-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+.brand-sub { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-dim); margin-top: 5px; }
+
+/* meta strip */
+.meta-strip {
+  position: absolute;
+  top: 80px; left: 36px;
+  display: flex; flex-direction: column; gap: 18px;
+  color: var(--ink);
+}
+.meta-strip .stat {
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+}
+.meta-strip .stat .label {
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.meta-strip .stat .value {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 18px;
+  line-height: 1; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* footer */
+.footer {
+  position: absolute; bottom: 28px; left: 36px; right: 36px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-dim);
+  pointer-events: none;
+}
+.footer .hint { display: flex; gap: 18px; align-items: center; }
+.footer .hint .key {
+  border: 1px solid var(--line-2); padding: 4px 8px; border-radius: 3px;
+  color: var(--ink); letter-spacing: 0.05em;
+}
+.footer .coords { font-variant-numeric: tabular-nums; }
+
+/* photo markers */
+.photo-markers { position: absolute; inset: 0; pointer-events: none; z-index: 8; }
+.photo-marker {
+  position: absolute; top: 0; left: 0;
+  width: 26px; height: 34px;
+  border-radius: 5px;
+  border: 0.75px solid var(--marker-border, #f4f1ea);
+  background: #1a1a20;
+  overflow: visible; cursor: pointer; pointer-events: auto;
+  transform: translate3d(-9999px, -9999px, 0);
+  transition: opacity 0.25s ease, scale 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(0,0,0,0.6);
+  will-change: transform, opacity;
+}
+.photo-marker .photo-marker-img {
+  width: 100%; height: 100%; border-radius: 3px; object-fit: cover; display: block;
+  filter: contrast(1.02) saturate(0.95);
+}
+.photo-marker:hover { scale: 1.18; z-index: 10; }
+.photo-marker-badge {
+  position: absolute; top: -6px; right: -7px;
+  min-width: 14px; height: 14px; border-radius: 999px;
+  border: 0.75px solid var(--marker-border, #f4f1ea);
+  background: var(--marker-badge, #f5c542);
+  color: #07070a;
+  font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700;
+  letter-spacing: 0.04em;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px; line-height: 1;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.45);
+}
+.photo-marker::after {
+  content: ""; position: absolute; left: 50%; bottom: -4px;
+  width: 5px; height: 5px; background: var(--marker-border, #f4f1ea);
+  transform: translateX(-50%) rotate(45deg); border-radius: 1px;
+}
+
+/* country label tooltip */
+.country-label {
+  position: absolute; pointer-events: none;
+  transform: translate(-50%, calc(-100% - 14px));
+  background: rgba(13,13,17,0.92); backdrop-filter: blur(8px);
+  border: 1px solid var(--line-2);
+  padding: 7px 12px; border-radius: 6px;
+  font-size: 12px; white-space: nowrap; z-index: 30;
+  display: flex; align-items: center; gap: 10px;
+}
+.country-label .iso {
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+  color: var(--ink-dim); letter-spacing: 0.15em;
+  border-left: 1px solid var(--line-2); padding-left: 10px;
+}
+.country-label .name { font-family: 'Space Grotesk', sans-serif; font-weight: 500; }
+.country-label .vmark { width: 5px; height: 5px; border-radius: 50%; background: var(--ink); }
+
+/* MODAL */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(5,5,7,0.55); backdrop-filter: blur(6px);
+  z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.25s ease;
+}
+.modal {
+  width: min(560px, 92vw); max-height: 86vh;
+  background:
+    linear-gradient(155deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 40%, rgba(0,0,0,0.15) 100%),
+    rgba(20,20,26,0.45);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px; overflow: hidden;
+  display: flex; flex-direction: column;
+  animation: slideUp 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 0 0 0 1px rgba(255,255,255,0.02),
+    0 30px 80px rgba(0,0,0,0.55),
+    0 0 140px var(--modal-glow, rgba(245,197,66,0.22));
+}
+.modal::before {
+  content: ""; position: absolute; inset: 0; border-radius: 18px;
+  background: radial-gradient(140% 80% at 20% 0%, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 50%);
+  pointer-events: none;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.modal-view { width: min(900px, 94vw); height: 80vh; max-height: 80vh; display: flex; flex-direction: column; }
+.modal-view.layout-sidebar { width: min(1180px, 96vw); height: 80vh; display: block; position: relative; }
+.view-corner-actions { position: absolute; top: 14px; right: 14px; z-index: 5; }
+.view-split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); height: 100%; }
+.view-photos { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #050507; border-right: 1px solid var(--line); }
+.view-photos .slideshow { flex: 1; min-height: 0; }
+.thumb-strip {
+  flex-shrink: 0; padding: 10px 12px; display: flex; gap: 6px; overflow-x: auto;
+  scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
+  background: rgba(8,8,11,0.7); border-top: 1px solid var(--line);
+}
+.thumb-strip::-webkit-scrollbar { height: 6px; }
+.thumb-strip::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+.thumb {
+  flex-shrink: 0; width: 56px; height: 42px; border-radius: 4px;
+  border: 1px solid var(--line); background: #0a0a0d; overflow: hidden;
+  padding: 0; cursor: pointer; transition: border-color 0.2s, opacity 0.2s, transform 0.1s; opacity: 0.55;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(0.2); }
+.thumb:hover { opacity: 0.9; transform: translateY(-1px); }
+.thumb.is-current { opacity: 1; }
+.thumb.is-current img { filter: none; }
+.view-sidebar { display: flex; flex-direction: column; min-height: 0; background: rgba(8,8,11,0.45); }
+.view-sidebar-head {
+  padding: 22px 26px 18px 26px; border-bottom: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 10px; padding-right: 100px;
+}
+.view-sidebar-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; }
+.view-sidebar-head .modal-title { font-size: 26px; }
+.view-sidebar-head .view-range { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); }
+.view-sidebar-body { flex: 1; overflow-y: auto; padding: 18px 26px 22px; display: flex; flex-direction: column; gap: 22px; }
+.view-sidebar-section { display: flex; flex-direction: column; gap: 8px; }
+.icon-btn {
+  background: rgba(244,241,234,0.04); border: 1px solid var(--line-2); color: var(--ink);
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s; margin-left: 6px;
+}
+.icon-btn:hover { background: rgba(244,241,234,0.10); border-color: var(--ink-dim); }
+.view-actions { display: flex; gap: 6px; }
+
+.slideshow { position: relative; width: 100%; flex: 1; min-height: 0; background: #050507; overflow: hidden; }
+.slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.8s ease; pointer-events: none; }
+.slide.is-current { opacity: 1; }
+.slideshow-empty { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; color: var(--ink-dim); }
+.slideshow-empty-text { font-family: 'Inter', sans-serif; font-size: 13px; }
+.slide-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(5,5,7,0.5); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.12); color: var(--ink); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s, background 0.15s;
+}
+.slideshow:hover .slide-nav { opacity: 1; }
+.slide-nav:hover { background: rgba(5,5,7,0.75); }
+.slide-prev { left: 12px; }
+.slide-next { right: 12px; }
+.slide-counter {
+  position: absolute; top: 12px; right: 14px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+  color: var(--ink); background: rgba(5,5,7,0.6); backdrop-filter: blur(6px);
+  padding: 4px 8px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.10);
+}
+.view-meta { padding: 20px 26px 22px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line); background: rgba(8,8,11,0.5); flex-shrink: 0; }
+.view-head { padding: 16px 24px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; position: relative; flex-shrink: 0; }
+.view-head .modal-title { flex: 1; font-size: 22px; }
+.view-range { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); }
+.view-highlight-label { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-dim); }
+.view-note { font-family: 'Space Grotesk', sans-serif; font-size: 18px; line-height: 1.4; color: var(--ink); letter-spacing: -0.005em; font-weight: 400; }
+
+.modal-head { padding: 14px 22px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; position: relative; }
+.modal-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px; display: flex; gap: 12px; align-items: center; }
+.modal-title { font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 18px; letter-spacing: -0.015em; line-height: 1.1; margin: 0; }
+.modal-close { background: none; border: 1px solid var(--line-2); color: var(--ink); width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; }
+.modal-close:hover { background: rgba(244,241,234,0.06); border-color: var(--ink-dim); }
+.modal-body { padding: 20px 26px 22px; overflow: auto; display: flex; flex-direction: column; gap: 8px; position: relative; min-width: 0; }
+.field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.field label { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-dim); display: flex; align-items: baseline; gap: 10px; }
+.field input, .field textarea {
+  background: rgba(244,241,234,0.03); border: 1px solid var(--line-2); border-radius: 6px;
+  color: var(--ink); font-family: 'Inter', sans-serif; font-size: 13px; padding: 9px 12px;
+  outline: none; resize: none; transition: border-color 0.2s, background 0.2s;
+}
+.field input:focus, .field textarea:focus { border-color: var(--ink-dim); background: rgba(244,241,234,0.05); }
+.field textarea { min-height: 70px; line-height: 1.5; }
+.field input[type="date"] { color-scheme: dark; color: var(--ink); font-family: 'Inter', sans-serif; }
+.field input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.55); opacity: 0.95; cursor: pointer; margin-left: 6px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+.photos-section { display: flex; flex-direction: column; margin-top: 4px; min-width: 0; width: 100%; }
+.photos-section .label { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.photo-grid {
+  display: flex; flex-direction: row; flex-wrap: nowrap; gap: 6px;
+  overflow-x: auto; overflow-y: hidden; padding: 2px 2px 8px 2px;
+  scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; min-width: 0; width: 100%;
+}
+.photo-grid::-webkit-scrollbar { height: 6px; }
+.photo-grid::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+.photo { width: 62px; height: 82px; flex-shrink: 0; background: #1a1a20; border-radius: 4px; overflow: hidden; position: relative; cursor: pointer; border: 1px solid var(--line); }
+.photo img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(0.15) contrast(1.05); transition: filter 0.3s; }
+.photo:hover img { filter: none; }
+.photo .remove { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 50%; background: rgba(5,5,7,0.9); border: 1px solid var(--line-2); color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; opacity: 0; transition: opacity 0.15s; padding: 0; }
+.photo:hover .remove { opacity: 1; }
+.photo-drop { width: 62px; height: 82px; flex-shrink: 0; border: 1px dashed var(--line-2); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: var(--ink-dim); transition: border-color 0.2s, color 0.2s, background 0.2s; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; text-align: center; }
+.photo-drop:hover, .photo-drop.dragging { border-color: var(--ink); color: var(--ink); background: rgba(244,241,234,0.03); }
+
+.modal-foot { border-top: 1px solid var(--line); padding: 14px 26px; display: flex; justify-content: space-between; align-items: center; background: rgba(8,8,11,0.6); position: relative; }
+.btn { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; padding: 11px 22px; border-radius: 50px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--line-2); background: transparent; color: var(--ink); }
+.btn:hover { border-color: var(--ink-dim); }
+.btn.primary { background: var(--ink); color: #07070a; border-color: var(--ink); }
+.btn.primary:hover { background: #fff; border-color: #fff; }
+.btn.primary:disabled { opacity: 0.5; cursor: progress; }
+.btn.ghost-danger { color: var(--ink-dim); border-color: transparent; }
+.btn.ghost-danger:hover { color: var(--ink); border-color: var(--line-2); }
+.status-line { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--ink-dim); text-transform: uppercase; }
+
+.zoom-indicator { position: fixed; bottom: 28px; left: 36px; z-index: 12; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; background: rgba(13,13,17,0.7); backdrop-filter: blur(14px); border: 1px solid var(--line-2); border-radius: 50px; animation: fadeIn 0.25s ease; }
+.zoom-btn { width: 28px; height: 28px; border-radius: 50%; background: rgba(244,241,234,0.06); border: 1px solid var(--line-2); color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; }
+.zoom-btn:hover { background: rgba(244,241,234,0.12); border-color: var(--ink-dim); }
+.zoom-value { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.1em; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
+.lightbox { position: fixed; inset: 0; z-index: 60; background: rgba(5,5,7,0.96); display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; cursor: zoom-out; }
+.lightbox img { max-width: 90vw; max-height: 90vh; }
+
+.loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: var(--ink-dim); text-transform: uppercase; }
+.loading .spinner { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line-2); border-top-color: var(--ink); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 760px) { .brand-sub { display: none; } .view-split { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
-<div id="app">
-  <header>
-    <span class="title">My Travel Globe</span>
-    <span class="spacer"></span>
-    <label><input type="checkbox" id="spin" checked> auto-spin</label>
-    <span class="stat"><span id="count">0</span> countries visited</span>
-  </header>
-  <div id="stage">
-    <div id="loader">Loading the world&hellip;</div>
-    <div id="tooltip"></div>
-    <div id="hint">drag to rotate &middot; scroll to zoom &middot; click a country</div>
-  </div>
-</div>
-<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div id="root"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3-array@3"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3-geo@3"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-// ---- Supabase setup ----
+
+<script type="text/babel" data-presets="react">
+/* global React, ReactDOM, d3, topojson, supabase */
+const { useState, useEffect, useRef, useMemo, useCallback, useImperativeHandle, forwardRef } = React;
+
+/* ============================ SUPABASE ============================ */
 const SUPABASE_URL = 'https://vcgugbclnkezvmxvltkf.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjZ3VnYmNsbmtlenZteHZsdGtmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMzIxMTksImV4cCI6MjA5NjcwODExOX0.4sdUM1_R3phFOr2fkpSoLUhHkPIoZr_e7pgc2hDcW00';
+const BUCKET = 'Globe Photos';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-// ---- Globe constants ----
-const SPIN_SPEED = 0.0008;
-const DOT_SIZE = 0.013;
-const DIM = 0.42;
-const BRIGHT = 1.0;
-const SAMPLE_STEP = 1.05;
+const ACCENT = '#f5c542';
 
-// ---- State ----
-// trips: { [countryName]: { id, photos: [{ id, storage_path, url }] } }
-const trips = {};
-const stage = document.getElementById('stage');
-const overlay = document.getElementById('overlay');
-const modalEl = document.getElementById('modal');
-const tooltip = document.getElementById('tooltip');
-const spinChk = document.getElementById('spin');
-const hint = document.getElementById('hint');
-
-let W = stage.clientWidth, H = stage.clientHeight;
-const scene = new THREE.Scene();
-const cam = new THREE.PerspectiveCamera(40, W/H, 0.1, 100);
-cam.position.z = 3.0;
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(W, H);
-stage.appendChild(renderer.domElement);
-const canvas = renderer.domElement;
-
-const globe = new THREE.Group();
-scene.add(globe);
-globe.add(new THREE.Mesh(new THREE.SphereGeometry(0.985, 48, 48), new THREE.MeshBasicMaterial({ color: 0x000000 })));
-
-const halo = new THREE.Mesh(new THREE.SphereGeometry(1.16, 48, 48), new THREE.ShaderMaterial({
-  transparent: true, side: THREE.BackSide, depthWrite: false,
-  vertexShader: 'varying vec3 vN; void main(){ vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-  fragmentShader: 'varying vec3 vN; void main(){ float i=pow(0.62-dot(vN,vec3(0.0,0.0,1.0)),3.0); gl_FragColor=vec4(1.0,1.0,1.0,1.0)*i*0.85;}'
-}));
-scene.add(halo);
-
-function toVec(lon, lat, r) {
-  const phi = (90-lat)*Math.PI/180, th = (lon+180)*Math.PI/180;
-  return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(th));
+/* ============================ HELPERS ============================ */
+function hexToRgb(hex) {
+  const h = (hex || '#f5c542').replace('#', '');
+  const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(v, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function hexToGlow(accent) {
+  const [r, g, b] = hexToRgb(accent);
+  return `rgba(${r}, ${g}, ${b}, 0.22)`;
+}
+function fmtDate(s) {
+  if (!s) return null;
+  return new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function fmtRange(from, to) {
+  if (!from && !to) return null;
+  if (from && to && from !== to) return `${fmtDate(from)} → ${fmtDate(to)}`;
+  return fmtDate(from || to);
+}
+async function compressImage(file, maxDim = 1400, quality = 0.78) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxDim) { height = (height / width) * maxDim; width = maxDim; }
+        else if (height > maxDim) { width = (width / height) * maxDim; height = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(b => resolve(b), 'image/jpeg', quality);
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
-let geoFeatures = [];
-let dotGeo = null;
-const dotCountry = [];
+/* ============================ GLOBE ============================ */
+const Globe = forwardRef(function Globe(props, ref) {
+  const { onCountryClick, onHoverChange, visited = {}, onCountriesLoaded, landing = false, photoMarkers = [] } = props;
 
-async function build() {
-  // Verify all CDN libraries actually loaded before using them
-  const missing = [];
-  if (typeof THREE === 'undefined') missing.push('three.js');
-  if (typeof d3 === 'undefined' || typeof d3.geoContains !== 'function') missing.push('d3-geo');
-  if (typeof topojson === 'undefined') missing.push('topojson-client');
-  if (typeof window.supabase === 'undefined') missing.push('supabase-js');
-  if (missing.length) throw new Error('Library failed to load: ' + missing.join(', ') + '. Likely a network/CDN block.');
+  const markerRefs = useRef({});
+  const photoMarkersRef = useRef(photoMarkers);
+  useEffect(() => { photoMarkersRef.current = photoMarkers; }, [photoMarkers]);
 
-  const resp = await fetch('countries.json');
-  if (!resp.ok) throw new Error('Could not load countries.json (HTTP ' + resp.status + ')');
-  const topo = await resp.json();
-  const geo = topojson.feature(topo, topo.objects.countries);
-  geoFeatures = geo.features;
+  const canvasRef = useRef(null);
+  const stateRef = useRef({
+    rotation: [20, -15, 0], velocity: [0, 0], isDragging: false, lastPointer: null,
+    countries: null, hoverIso: null, pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+    width: 0, height: 0, targetRotation: null, lastFrameTime: 0,
+    zoom: 1.3, targetZoom: null, landingProgress: landing ? 1 : 0, landingAnim: null, verticalOffsetPx: 0,
+  });
 
-  const positions = [];
-  const colors = [];
-  for (let lat = -85; lat <= 85; lat += SAMPLE_STEP) {
-    const circ = Math.max(Math.cos(lat*Math.PI/180), 0.04);
-    const lonStep = SAMPLE_STEP / circ;
-    for (let lon = -180; lon <= 180; lon += lonStep) {
-      const f = countryAt(lon, lat);
-      if (f) {
-        const v = toVec(lon, lat, 1.0);
-        positions.push(v.x, v.y, v.z);
-        colors.push(DIM, DIM, DIM);
-        dotCountry.push(nameOf(f));
-      }
+  const [loaded, setLoaded] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState(null);
+  const [hoverCountry, setHoverCountry] = useState(null);
+
+  useImperativeHandle(ref, () => ({
+    resetZoom: () => { stateRef.current.targetZoom = 1.3; },
+    getZoom: () => stateRef.current.zoom,
+    getCoords: () => {
+      const r = stateRef.current.rotation;
+      return [-r[0], -r[1]];
+    },
+  }), []);
+
+  // load topojson
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const resp = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+      const topo = await resp.json();
+      const countries = topojson.feature(topo, topo.objects.countries);
+      countries.features.forEach(f => { f.properties.iso = f.id; });
+      if (cancelled) return;
+      stateRef.current.countries = countries;
+      setLoaded(true);
+      onCountriesLoaded && onCountriesLoaded(countries);
     }
-  }
-  dotGeo = new THREE.BufferGeometry();
-  dotGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  dotGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  globe.add(new THREE.Points(dotGeo, new THREE.PointsMaterial({ size: DOT_SIZE, vertexColors: true, sizeAttenuation: true })));
-  document.getElementById('loader').style.display = 'none';
+    load().catch(err => console.error('globe load failed', err));
+    return () => { cancelled = true; };
+  }, []);
 
-  // Now load saved trips from Supabase
-  await loadTripsFromSupabase();
-}
+  // resize
+  useEffect(() => {
+    const onResize = () => {
+      const c = canvasRef.current;
+      if (!c) return;
+      const w = window.innerWidth, h = window.innerHeight, dpr = stateRef.current.pixelRatio;
+      c.width = w * dpr; c.height = h * dpr; c.style.width = w + 'px'; c.style.height = h + 'px';
+      stateRef.current.width = w; stateRef.current.height = h;
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
-function nameOf(f){ return (f.properties && f.properties.name) || ('#'+f.id); }
-function countryAt(lon, lat){ for (const f of geoFeatures){ if (d3.geoContains(f, [lon, lat])) return f; } return null; }
+  // landing
+  const LANDING_DURATION = 2400, LANDING_OFFSET_VH = 0.78;
+  useEffect(() => {
+    const s = stateRef.current;
+    s.landingAnim = { from: s.landingProgress, to: landing ? 1 : 0, start: performance.now(), duration: LANDING_DURATION };
+  }, [landing]);
 
-function setCountry(name, on){
-  if (!dotGeo) return;
-  const col = dotGeo.attributes.color;
-  const v = on ? BRIGHT : DIM;
-  for (let i = 0; i < dotCountry.length; i++){ if (dotCountry[i] === name) col.setXYZ(i, v, v, v); }
-  col.needsUpdate = true;
-}
+  // render loop
+  useEffect(() => {
+    let raf;
+    const draw = (t) => {
+      const s = stateRef.current;
+      const c = canvasRef.current;
+      if (!c) { raf = requestAnimationFrame(draw); return; }
+      const dt = s.lastFrameTime ? Math.min(0.05, (t - s.lastFrameTime) / 1000) : 0.016;
+      s.lastFrameTime = t;
+      const ctx = c.getContext('2d');
+      const w = s.width, h = s.height, dpr = s.pixelRatio;
 
-function updateCount() {
-  document.getElementById('count').textContent = Object.keys(trips).length;
-}
-
-async function loadTripsFromSupabase() {
-  const { data: tripRows, error: e1 } = await sb.from('trips').select('id, country_name');
-  if (e1) { console.error('Load trips failed:', e1); return; }
-
-  const { data: photoRows, error: e2 } = await sb.from('photos').select('id, trip_id, storage_path');
-  if (e2) { console.error('Load photos failed:', e2); return; }
-
-  for (const t of tripRows) {
-    const photos = photoRows
-      .filter(p => p.trip_id === t.id)
-      .map(p => ({
-        id: p.id,
-        storage_path: p.storage_path,
-        url: sb.storage.from('Globe Photos').getPublicUrl(p.storage_path).data.publicUrl
-      }));
-    trips[t.country_name] = { id: t.id, photos };
-    setCountry(t.country_name, true);
-  }
-  updateCount();
-}
-
-let dragging=false, lx=0, ly=0, vel=SPIN_SPEED, moved=0;
-function down(x,y){ dragging=true; moved=0; lx=x; ly=y; hint.style.opacity='0'; }
-function move(x,y){ if(!dragging)return; const dx=(x-lx)*0.005, dy=(y-ly)*0.005; globe.rotation.y+=dx; globe.rotation.x=Math.max(-1.15,Math.min(1.15,globe.rotation.x+dy)); vel=dx; lx=x; ly=y; moved+=Math.abs(dx)+Math.abs(dy); }
-function up(){ dragging=false; }
-canvas.addEventListener('mousedown', e=>down(e.clientX,e.clientY));
-window.addEventListener('mousemove', e=>{ move(e.clientX,e.clientY); hover(e); });
-window.addEventListener('mouseup', up);
-canvas.addEventListener('touchstart', e=>{ const t=e.touches[0]; down(t.clientX,t.clientY); }, {passive:true});
-canvas.addEventListener('touchmove', e=>{ const t=e.touches[0]; move(t.clientX,t.clientY); }, {passive:true});
-canvas.addEventListener('touchend', up);
-canvas.addEventListener('wheel', e=>{ e.preventDefault(); cam.position.z=Math.max(1.6,Math.min(4.5,cam.position.z+e.deltaY*0.002)); }, {passive:false});
-
-const ray=new THREE.Raycaster(), m=new THREE.Vector2();
-function screenToLonLat(cx, cy){
-  const r=canvas.getBoundingClientRect();
-  m.x=((cx-r.left)/r.width)*2-1; m.y=-((cy-r.top)/r.height)*2+1;
-  ray.setFromCamera(m, cam);
-  const hit=ray.intersectObject(globe.children[0]);
-  if(!hit.length) return null;
-  const p=hit[0].point.clone(); globe.worldToLocal(p); p.normalize();
-  const lat=90-Math.acos(p.y)*180/Math.PI;
-  let lon=Math.atan2(p.z,-p.x)*180/Math.PI-180;
-  while(lon<-180)lon+=360; while(lon>180)lon-=360;
-  return [lon, lat];
-}
-function hover(e){
-  if(dragging||!geoFeatures.length){ tooltip.style.opacity='0'; return; }
-  const ll=screenToLonLat(e.clientX,e.clientY);
-  const f=ll?countryAt(ll[0],ll[1]):null;
-  if(f){ const r=stage.getBoundingClientRect(); tooltip.style.left=(e.clientX-r.left)+'px'; tooltip.style.top=(e.clientY-r.top)+'px'; tooltip.textContent=nameOf(f)+(trips[nameOf(f)]?' (visited)':''); tooltip.style.opacity='1'; canvas.style.cursor='pointer'; }
-  else { tooltip.style.opacity='0'; canvas.style.cursor=dragging?'grabbing':'grab'; }
-}
-canvas.addEventListener('click', e=>{
-  if(moved>0.01||overlay.classList.contains('open'))return;
-  const ll=screenToLonLat(e.clientX,e.clientY);
-  const f=ll?countryAt(ll[0],ll[1]):null;
-  if(f) openModal(nameOf(f));
-});
-
-function openModal(name){
-  const trip = trips[name];
-  const photos = trip ? trip.photos : [];
-  overlay.classList.add('open');
-  modalEl.innerHTML =
-    '<div class="row"><h2>'+name+'</h2><button class="closeBtn" id="x">&times;</button></div>'+
-    (photos.length
-      ? '<div class="grid">'+photos.map(p=>'<div class="ph"><img src="'+p.url+'"></div>').join('')+'</div>'
-      : '<p class="empty">No photos yet. Add some from your trip to '+name+' and the dots will light up.</p>')+
-    '<input type="file" id="file" accept="image/*" multiple style="display:none">'+
-    '<button class="addBtn" id="add">'+(photos.length?'Add more photos':'Add photos')+'</button>'+
-    '<div class="status" id="status"></div>';
-  document.getElementById('x').onclick=()=>overlay.classList.remove('open');
-  const fileInput=document.getElementById('file');
-  const addBtn=document.getElementById('add');
-  const statusEl=document.getElementById('status');
-  addBtn.onclick=()=>fileInput.click();
-  fileInput.onchange=async ()=>{
-    const files=Array.from(fileInput.files||[]);
-    if(!files.length)return;
-    addBtn.disabled=true;
-    try {
-      // Ensure trip row exists
-      let tripId;
-      if (trips[name]) {
-        tripId = trips[name].id;
-      } else {
-        statusEl.textContent='Creating trip...';
-        const { data, error } = await sb.from('trips').insert({ country_name: name }).select('id').single();
-        if (error) throw error;
-        tripId = data.id;
-        trips[name] = { id: tripId, photos: [] };
+      // landing easing
+      if (s.landingAnim) {
+        const elapsed = t - s.landingAnim.start;
+        const u = Math.min(1, Math.max(0, elapsed / s.landingAnim.duration));
+        const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+        s.landingProgress = s.landingAnim.from + (s.landingAnim.to - s.landingAnim.from) * e;
+        if (u >= 1) { s.landingProgress = s.landingAnim.to; s.landingAnim = null; }
       }
-      // Upload each file, then insert photo row
-      for (let i=0; i<files.length; i++){
-        const file = files[i];
-        statusEl.textContent = 'Uploading '+(i+1)+' of '+files.length+'...';
-        const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
-        const path = tripId + '/' + Date.now() + '-' + i + '.' + ext;
-        const { error: upErr } = await sb.storage.from('Globe Photos').upload(path, file, { contentType: file.type });
-        if (upErr) throw upErr;
-        const { data: photoRow, error: insErr } = await sb.from('photos').insert({ trip_id: tripId, storage_path: path }).select('id').single();
-        if (insErr) throw insErr;
-        const url = sb.storage.from('Globe Photos').getPublicUrl(path).data.publicUrl;
-        trips[name].photos.push({ id: photoRow.id, storage_path: path, url });
+      const isLanding = s.landingProgress > 0.02;
+
+      // physics
+      const autoSpinEnabled = true;
+      if (!s.isDragging) {
+        s.velocity[0] *= 0.93; s.velocity[1] *= 0.93;
+        if (s.targetRotation) {
+          const k = 0.06;
+          s.rotation[0] += (s.targetRotation[0] - s.rotation[0]) * k;
+          s.rotation[1] += (s.targetRotation[1] - s.rotation[1]) * k;
+          if (Math.abs(s.targetRotation[0] - s.rotation[0]) < 0.1 && Math.abs(s.targetRotation[1] - s.rotation[1]) < 0.1) s.targetRotation = null;
+        } else {
+          s.rotation[0] += s.velocity[0] * dt * 60;
+          s.rotation[1] += s.velocity[1] * dt * 60;
+          if (autoSpinEnabled && Math.abs(s.velocity[0]) < 0.05 && !isLanding) {
+            const zoomDamp = 1 / Math.max(1, s.zoom * 0.8);
+            const hoverDamp = s.hoverIso ? 0.15 : 1;
+            s.rotation[0] += dt * 3.5 * zoomDamp * hoverDamp;
+          }
+        }
+        s.rotation[1] = Math.max(-80, Math.min(80, s.rotation[1]));
       }
-      setCountry(name, true);
-      updateCount();
-      openModal(name); // refresh modal with new photos
-    } catch (err) {
-      console.error(err);
-      statusEl.textContent = 'Error: ' + (err.message || 'upload failed');
-      addBtn.disabled=false;
+      if (s.targetZoom !== null) {
+        s.zoom += (s.targetZoom - s.zoom) * 0.12;
+        if (Math.abs(s.targetZoom - s.zoom) < 0.005) { s.zoom = s.targetZoom; s.targetZoom = null; }
+      }
+
+      const size = Math.min(w, h);
+      const radius = size * 0.36 * s.zoom;
+      s.verticalOffsetPx = s.landingProgress * LANDING_OFFSET_VH * h;
+      const yOff = s.verticalOffsetPx;
+
+      const projection = d3.geoOrthographic().scale(radius).translate([w / 2, h / 2 + yOff]).rotate(s.rotation).clipAngle(90);
+      const path = d3.geoPath(projection, ctx);
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const cx = w / 2, cy = h / 2 + yOff;
+      const glowAlpha = 0.12;
+
+      // atmosphere
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const corona = ctx.createRadialGradient(cx, cy, radius * 0.99, cx, cy, radius * 1.28);
+      corona.addColorStop(0.00, `rgba(244,241,234,${glowAlpha})`);
+      corona.addColorStop(0.25, `rgba(244,241,234,${glowAlpha * 0.55})`);
+      corona.addColorStop(0.60, `rgba(244,241,234,${glowAlpha * 0.18})`);
+      corona.addColorStop(1.00, 'rgba(244,241,234,0)');
+      ctx.fillStyle = corona; ctx.beginPath(); ctx.arc(cx, cy, radius * 1.28, 0, Math.PI * 2); ctx.fill();
+      const halo = ctx.createRadialGradient(cx, cy, radius * 1.05, cx, cy, radius * 1.90);
+      halo.addColorStop(0.00, `rgba(244,241,234,${glowAlpha * 0.45})`);
+      halo.addColorStop(0.30, `rgba(244,241,234,${glowAlpha * 0.22})`);
+      halo.addColorStop(0.65, `rgba(244,241,234,${glowAlpha * 0.07})`);
+      halo.addColorStop(1.00, 'rgba(244,241,234,0)');
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, radius * 1.90, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // sphere base (glass palette)
+      ctx.save(); ctx.globalAlpha = 0.78; ctx.fillStyle = '#0a0a0d';
+      ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+
+      // top-left highlight
+      const hi = ctx.createRadialGradient(cx - radius * 0.45, cy - radius * 0.4, radius * 0.05, cx, cy, radius);
+      hi.addColorStop(0, 'rgba(244,241,234,0.08)');
+      hi.addColorStop(0.55, 'rgba(244,241,234,0.02)');
+      hi.addColorStop(1, 'rgba(244,241,234,0)');
+      ctx.fillStyle = hi; ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+
+      // bottom-right shadow
+      const sh = ctx.createRadialGradient(cx + radius * 0.4, cy + radius * 0.45, radius * 0.05, cx + radius * 0.3, cy + radius * 0.3, radius * 1.1);
+      sh.addColorStop(0, 'rgba(0,0,0,0.5)'); sh.addColorStop(0.7, 'rgba(0,0,0,0.15)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = sh; ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2); ctx.restore();
+
+      // rim
+      ctx.strokeStyle = 'rgba(244,241,234,0.23)'; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+
+      // inner shadow vignette
+      const innerShadow = ctx.createRadialGradient(cx, cy, radius * 0.55, cx, cy, radius);
+      innerShadow.addColorStop(0, 'rgba(0,0,0,0)'); innerShadow.addColorStop(0.7, 'rgba(0,0,0,0.18)');
+      innerShadow.addColorStop(0.95, 'rgba(0,0,0,0.55)'); innerShadow.addColorStop(1, 'rgba(0,0,0,0.75)');
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = innerShadow; ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2); ctx.restore();
+
+      const accent = ACCENT;
+      const [aR, aG, aB] = hexToRgb(accent);
+      const hoverIso = s.hoverIso;
+
+      if (s.countries) {
+        // visited fills (wash)
+        ctx.save();
+        ctx.fillStyle = `rgba(${aR}, ${aG}, ${aB}, 0.45)`;
+        for (const f of s.countries.features) {
+          if (visited[f.properties.iso]) { ctx.beginPath(); path(f); ctx.fill(); }
+        }
+        // hover fill
+        if (hoverIso && !visited[hoverIso]) {
+          const hf = s.countries.features.find(f => f.properties.iso === hoverIso);
+          if (hf) {
+            ctx.save(); ctx.shadowColor = `rgba(${aR}, ${aG}, ${aB}, 0.85)`; ctx.shadowBlur = 18;
+            ctx.fillStyle = `rgba(${aR}, ${aG}, ${aB}, 0.22)`; ctx.beginPath(); path(hf); ctx.fill(); ctx.restore();
+          }
+        }
+        ctx.restore();
+
+        // land fill + outlines
+        ctx.save();
+        ctx.fillStyle = 'rgba(244,241,234,0.045)';
+        ctx.beginPath(); path({ type: 'FeatureCollection', features: s.countries.features }); ctx.fill();
+        ctx.strokeStyle = 'rgba(244,241,234,0.28)'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); path({ type: 'FeatureCollection', features: s.countries.features }); ctx.stroke();
+
+        if (hoverIso) {
+          const hf = s.countries.features.find(f => f.properties.iso === hoverIso);
+          if (hf) {
+            ctx.save();
+            ctx.shadowColor = `rgba(${aR}, ${aG}, ${aB}, 0.95)`; ctx.shadowBlur = 14;
+            ctx.strokeStyle = `rgba(${aR}, ${aG}, ${aB}, 1)`; ctx.lineWidth = 1.3;
+            ctx.beginPath(); path(hf); ctx.stroke();
+            ctx.shadowBlur = 24; ctx.lineWidth = 0.6; ctx.beginPath(); path(hf); ctx.stroke();
+            ctx.restore();
+          }
+        }
+        // visited outlines
+        ctx.strokeStyle = `rgba(${aR}, ${aG}, ${aB}, 0.85)`; ctx.lineWidth = 0.9;
+        for (const f of s.countries.features) {
+          if (visited[f.properties.iso]) { ctx.beginPath(); path(f); ctx.stroke(); }
+        }
+        ctx.restore();
+      }
+
+      // photo markers
+      const markersList = photoMarkersRef.current || [];
+      if (markersList.length > 0) {
+        const sizeFactor = Math.max(0.45, Math.min(1.4, radius / 360));
+        const MW = Math.max(11, Math.round(19 * sizeFactor));
+        const MH = Math.max(14, Math.round(25 * sizeFactor));
+        const TIP = Math.max(2, Math.round(3 * sizeFactor));
+        if (!s.markerLastSize) s.markerLastSize = 0;
+        const sizeChanged = Math.abs(s.markerLastSize - MW) > 0;
+        if (sizeChanged) s.markerLastSize = MW;
+
+        const visible = [];
+        for (const m of markersList) {
+          const el = markerRefs.current[m.iso];
+          if (!el) continue;
+          const lambda = m.lon * Math.PI / 180, phi = m.lat * Math.PI / 180;
+          const cosPhi = Math.cos(phi);
+          const x3 = cosPhi * Math.cos(lambda), y3 = Math.sin(phi), z3 = cosPhi * Math.sin(lambda);
+          const rx = -s.rotation[0] * Math.PI / 180;
+          const x1 = Math.cos(rx) * x3 + Math.sin(rx) * z3;
+          const ry = s.rotation[1] * Math.PI / 180;
+          const frontness = x1 * Math.cos(ry) - y3 * Math.sin(ry);
+          const proj = projection([m.lon, m.lat]);
+          if (!proj || frontness < 0.03 || isLanding) {
+            if (el.style.opacity !== '0') el.style.opacity = '0';
+            continue;
+          }
+          visible.push({ m, el, proj, frontness });
+        }
+        visible.sort((a, b) => a.m.iso < b.m.iso ? -1 : 1);
+        for (let i = 0; i < visible.length; i++) {
+          const v = visible[i];
+          if (sizeChanged) { v.el.style.width = `${MW}px`; v.el.style.height = `${MH}px`; }
+          const x = v.proj[0] - MW / 2, y = v.proj[1] - MH - TIP;
+          const edge = Math.min(1, (v.frontness - 0.03) / 0.18);
+          v.el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+          v.el.style.zIndex = String(100 + i);
+          const op = String(0.7 + 0.3 * edge);
+          if (v.el.style.opacity !== op) v.el.style.opacity = op;
+        }
+      }
+
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [visited]);
+
+  // pointer events
+  const getPointer = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const isTouch = e.touches && e.touches[0];
+    return [(isTouch ? e.touches[0].clientX : e.clientX) - rect.left, (isTouch ? e.touches[0].clientY : e.clientY) - rect.top];
+  };
+  const pickCountry = (p) => {
+    const s = stateRef.current;
+    if (!s.countries) return null;
+    const size = Math.min(s.width, s.height), radius = size * 0.36 * s.zoom;
+    const cx = s.width / 2, cy = s.height / 2 + (s.verticalOffsetPx || 0);
+    if (Math.hypot(p[0] - cx, p[1] - cy) > radius) return null;
+    const projection = d3.geoOrthographic().scale(radius).translate([cx, cy]).rotate(s.rotation).clipAngle(90);
+    const coord = projection.invert(p);
+    if (!coord) return null;
+    for (const f of s.countries.features) { if (d3.geoContains(f, coord)) return f.properties.iso; }
+    return null;
+  };
+  const handleDown = (e) => {
+    const s = stateRef.current;
+    s.isDragging = true; s.targetRotation = null;
+    s.lastPointer = getPointer(e); s.dragStartTime = performance.now(); s.dragStartPos = s.lastPointer.slice();
+    canvasRef.current.classList.add('dragging');
+  };
+  const handleMove = (e) => {
+    const s = stateRef.current;
+    const p = getPointer(e);
+    if (s.isDragging) {
+      const [px, py] = s.lastPointer;
+      const dx = p[0] - px, dy = p[1] - py;
+      s.rotation[0] += dx * 0.35; s.rotation[1] -= dy * 0.35;
+      s.rotation[1] = Math.max(-80, Math.min(80, s.rotation[1]));
+      s.velocity[0] = dx * 0.35; s.velocity[1] = -dy * 0.35;
+      s.lastPointer = p; setTooltipPos(null); setHoverCountry(null); s.hoverIso = null;
+    } else {
+      const iso = pickCountry(p);
+      if (iso !== s.hoverIso) {
+        s.hoverIso = iso;
+        if (iso && s.countries) {
+          const country = s.countries.features.find(f => f.properties.iso === iso);
+          setHoverCountry(country ? { iso, name: country.properties.name } : null);
+        } else setHoverCountry(null);
+        onHoverChange && onHoverChange(iso);
+      }
+      if (iso) { setTooltipPos({ x: p[0], y: p[1] }); canvasRef.current.classList.add('hovering'); }
+      else { setTooltipPos(null); canvasRef.current.classList.remove('hovering'); }
     }
   };
-}
-overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const onWheel = (e) => {
+      e.preventDefault();
+      const s = stateRef.current;
+      const dir = e.deltaY < 0 ? 1 : -1;
+      const factor = Math.exp(dir * 0.12);
+      s.targetZoom = Math.max(1.3, Math.min(6, s.zoom * factor));
+      setTooltipPos(null); setHoverCountry(null); s.hoverIso = null;
+    };
+    c.addEventListener('wheel', onWheel, { passive: false });
+    return () => c.removeEventListener('wheel', onWheel);
+  }, []);
+  const handleUp = () => {
+    const s = stateRef.current;
+    const wasDragging = s.isDragging;
+    s.isDragging = false;
+    canvasRef.current.classList.remove('dragging');
+    if (wasDragging && s.dragStartPos && s.dragStartTime) {
+      const dt = performance.now() - s.dragStartTime;
+      const p = s.lastPointer;
+      const dist = Math.hypot(p[0] - s.dragStartPos[0], p[1] - s.dragStartPos[1]);
+      if (dt < 300 && dist < 5) {
+        const iso = pickCountry(p);
+        if (iso) onCountryClick && onCountryClick(iso);
+      }
+    }
+  };
 
-window.addEventListener('resize', ()=>{ W=stage.clientWidth; H=stage.clientHeight; cam.aspect=W/H; cam.updateProjectionMatrix(); renderer.setSize(W,H); });
-
-function loop(){
-  requestAnimationFrame(loop);
-  if(!dragging){ if(spinChk.checked) globe.rotation.y+=SPIN_SPEED; else { globe.rotation.y+=vel; vel*=0.97; if(Math.abs(vel)<0.00005)vel=0; } }
-  renderer.render(scene, cam);
-}
-loop();
-build().catch(err=>{
-  document.getElementById('loader').innerHTML = 'Could not load <code>countries.json</code>.<br><span style="color:#888;font-size:12px">Make sure it sits in the same folder as this file.<br>Reason: '+(err.message||'unknown')+'</span>';
-  console.error(err);
+  return (
+    <div style={{ position: 'absolute', inset: 0 }}>
+      <canvas id="globe" ref={canvasRef}
+        onMouseDown={handleDown} onMouseMove={handleMove} onMouseUp={handleUp} onMouseLeave={handleUp}
+        onTouchStart={handleDown} onTouchMove={(e) => { e.preventDefault(); handleMove(e); }} onTouchEnd={handleUp} />
+      <div className="photo-markers" style={{ '--marker-badge': ACCENT, '--marker-border': ACCENT }}>
+        {photoMarkers.map(m => (
+          <div key={m.iso}
+            ref={el => { if (el) markerRefs.current[m.iso] = el; else delete markerRefs.current[m.iso]; }}
+            className="photo-marker" title={m.name}
+            onClick={(e) => { e.stopPropagation(); onCountryClick && onCountryClick(m.iso); }}>
+            <img src={m.photo} className="photo-marker-img" alt="" draggable={false} />
+            {m.count > 1 && <span className="photo-marker-badge">{m.count}</span>}
+          </div>
+        ))}
+      </div>
+      {!loaded && (<div className="loading"><div className="spinner"></div><div>Charting the world</div></div>)}
+      {hoverCountry && tooltipPos && (
+        <div className="country-label" style={{ left: tooltipPos.x, top: tooltipPos.y }}>
+          {visited[hoverCountry.iso] && <span className="vmark" style={{ background: ACCENT }}></span>}
+          <span className="name">{hoverCountry.name}</span>
+          <span className="iso" style={visited[hoverCountry.iso] ? { color: ACCENT } : undefined}>
+            {visited[hoverCountry.iso] ? 'VISITED' : 'TAP TO ADD'}
+          </span>
+        </div>
+      )}
+    </div>
+  );
 });
+
+/* ============================ MODAL ============================ */
+function ViewMode({ country, entry, accent, glow, onEdit, onClose }) {
+  const photos = entry.photos || [];
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (photos.length < 2 || paused) return;
+    const t = setInterval(() => setIdx(i => (i + 1) % photos.length), 4500);
+    return () => clearInterval(t);
+  }, [photos.length, paused]);
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight' && photos.length) setIdx(i => (i + 1) % photos.length);
+      if (e.key === 'ArrowLeft' && photos.length) setIdx(i => (i - 1 + photos.length) % photos.length);
+      if (e.key.toLowerCase() === 'e' && onEdit) onEdit();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [photos.length, onClose, onEdit]);
+
+  const range = fmtRange(entry.dateFrom, entry.dateTo);
+  const next = () => setIdx(i => (i + 1) % photos.length);
+  const prev = () => setIdx(i => (i - 1 + photos.length) % photos.length);
+  const backdropClick = (e) => { if (e.target === e.currentTarget) onClose(); };
+
+  const actions = (
+    <div className="view-actions">
+      {onEdit && (
+        <button className="icon-btn" onClick={onEdit} title="Edit (E)" aria-label="Edit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6 L18 10"/></svg>
+        </button>
+      )}
+      <button className="icon-btn" onClick={onClose} aria-label="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" strokeWidth="1.4" /></svg>
+      </button>
+    </div>
+  );
+  const slideshow = (
+    <div className="slideshow" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      {photos.length === 0 ? (
+        <div className="slideshow-empty">
+          <div className="slideshow-empty-text">No photos yet</div>
+          {onEdit && <button className="btn primary" style={{ background: accent, borderColor: accent, color: '#07070a' }} onClick={onEdit}>Add photos</button>}
+        </div>
+      ) : (
+        <>
+          {photos.map((p, i) => (<img key={p.id} src={p.src} alt="" className={`slide ${i === idx ? 'is-current' : ''}`} />))}
+          {photos.length > 1 && (
+            <>
+              <button className="slide-nav slide-prev" onClick={prev}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18 L9 12 L15 6"/></svg></button>
+              <button className="slide-nav slide-next" onClick={next}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6 L15 12 L9 18"/></svg></button>
+              <div className="slide-counter">{idx + 1} / {photos.length}</div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+  const thumbStrip = photos.length > 1 ? (
+    <div className="thumb-strip">
+      {photos.map((p, i) => (
+        <button key={p.id} className={`thumb ${i === idx ? 'is-current' : ''}`}
+          style={i === idx ? { borderColor: accent, boxShadow: `0 0 0 2px ${accent}40` } : undefined}
+          onClick={() => setIdx(i)}><img src={p.src} alt="" /></button>
+      ))}
+    </div>
+  ) : null;
+
+  return (
+    <div className="modal-backdrop" onMouseDown={backdropClick}>
+      <div className="modal modal-view layout-sidebar" onMouseDown={(e) => e.stopPropagation()} style={{ '--modal-glow': glow }}>
+        <div className="view-corner-actions">{actions}</div>
+        <div className="view-split">
+          <div className="view-photos">{slideshow}{thumbStrip}</div>
+          <aside className="view-sidebar">
+            <div className="view-sidebar-head">
+              <div className="view-sidebar-eyebrow" style={{ color: accent }}>Trip log</div>
+              <h2 className="modal-title">{country.name}</h2>
+              {range && <div className="view-range">{range}</div>}
+            </div>
+            <div className="view-sidebar-body">
+              {entry.notes && (
+                <div className="view-sidebar-section">
+                  <div className="view-highlight-label">Highlight of the trip</div>
+                  <div className="view-note">{entry.notes}</div>
+                </div>
+              )}
+              {!entry.notes && !range && (
+                <div className="view-sidebar-section">
+                  <div className="view-note" style={{ color: 'var(--ink-dim)', fontSize: 15 }}>A visited country. Click edit to add details.</div>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditMode({ country, entry, accent, glow, onClose, onSave, onDelete, onCancelToView, hasExisting }) {
+  const [dateFrom, setDateFrom] = useState(entry?.dateFrom || '');
+  const [dateTo, setDateTo] = useState(entry?.dateTo || '');
+  const [notes, setNotes] = useState(entry?.notes || '');
+  const [photos, setPhotos] = useState(entry?.photos || []); // {id, src, storage_path?, file?}
+  const [dragging, setDragging] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState('');
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const handleFiles = async (files) => {
+    const imgs = files.filter(f => f.type.startsWith('image/'));
+    if (!imgs.length) return;
+    const additions = [];
+    for (const f of imgs) {
+      const blob = await compressImage(f);
+      additions.push({ id: Math.random().toString(36).slice(2), src: URL.createObjectURL(blob), blob, pending: true });
+    }
+    setPhotos(p => [...p, ...additions]);
+  };
+  const onFileInput = (e) => { handleFiles(Array.from(e.target.files || [])); e.target.value = ''; };
+  const onDrop = (e) => { e.preventDefault(); setDragging(false); handleFiles(Array.from(e.dataTransfer.files || [])); };
+  const removePhoto = (id) => setPhotos(p => p.filter(x => x.id !== id));
+
+  const handleSave = async () => {
+    setBusy(true);
+    try {
+      setStatus('Saving trip…');
+      await onSave({ dateFrom, dateTo, notes: notes.trim(), photos, visited: true }, setStatus);
+    } catch (err) {
+      console.error(err);
+      setStatus('Error: ' + (err.message || 'save failed'));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ '--modal-glow': glow }}>
+        <div className="modal-head">
+          <div className="titles">
+            <div className="modal-eyebrow"><span>{hasExisting ? 'Editing' : 'New trip'}</span><span className="dot"></span><span>Memory</span></div>
+            <h2 className="modal-title">{country.name}</h2>
+          </div>
+          <button className="modal-close" onClick={onClose}><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" strokeWidth="1.4" /></svg></button>
+        </div>
+        <div className="modal-body">
+          <div className="field-row">
+            <div className="field"><label>From</label><input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></div>
+            <div className="field"><label>To</label><input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} /></div>
+          </div>
+          <div className="field">
+            <label>Highlight of the trip</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="What made this trip memorable?" />
+          </div>
+          <div className="photos-section">
+            <div className="label"><span>Photos</span><span>{photos.length}</span></div>
+            <div className={`photo-grid`}>
+              {photos.map(p => (
+                <div className="photo" key={p.id}>
+                  <img src={p.src} alt="" />
+                  <button className="remove" onClick={() => removePhoto(p.id)}>×</button>
+                </div>
+              ))}
+              <div className={`photo-drop ${dragging ? 'dragging' : ''}`}
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)} onDrop={onDrop}>
+                <span>+ Add</span>
+              </div>
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onFileInput} />
+          </div>
+        </div>
+        <div className="modal-foot">
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {hasExisting && <button className="btn ghost-danger" onClick={onDelete} disabled={busy}>Delete</button>}
+            {status && <span className="status-line">{status}</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {hasExisting && <button className="btn" onClick={onCancelToView} disabled={busy}>Cancel</button>}
+            <button className="btn primary" onClick={handleSave} disabled={busy}
+              style={{ background: accent, borderColor: accent }}>{busy ? 'Saving…' : 'Save'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CountryModal({ country, entry, onClose, onSave, onDelete }) {
+  const accent = ACCENT;
+  const glow = hexToGlow(accent);
+  const hasExisting = !!entry;
+  const [mode, setMode] = useState(hasExisting ? 'view' : 'edit');
+
+  if (mode === 'view' && entry) {
+    return <ViewMode country={country} entry={entry} accent={accent} glow={glow} onEdit={() => setMode('edit')} onClose={onClose} />;
+  }
+  return <EditMode country={country} entry={entry} accent={accent} glow={glow}
+    hasExisting={hasExisting}
+    onClose={onClose} onSave={onSave} onDelete={onDelete} onCancelToView={() => setMode('view')} />;
+}
+
+/* ============================ APP ============================ */
+function App() {
+  const [entries, setEntries] = useState({});       // iso -> { country, dateFrom, dateTo, notes, photos:[{id,src,storage_path}], visited, tripId }
+  const [countries, setCountries] = useState(null);
+  const [modalCountry, setModalCountry] = useState(null);
+  const [zoom, setZoom] = useState(1.3);
+  const [landing, setLanding] = useState(true);
+  const [coords, setCoords] = useState([0, 0]);
+  const globeRef = useRef(null);
+
+  useEffect(() => { const t = setTimeout(() => setLanding(false), 1300); return () => clearTimeout(t); }, []);
+
+  // poll zoom + coords
+  useEffect(() => {
+    const t = setInterval(() => {
+      const z = globeRef.current?.getZoom?.();
+      if (z != null && Math.abs(z - zoom) > 0.01) setZoom(z);
+      const c = globeRef.current?.getCoords?.();
+      if (c) setCoords(c);
+    }, 200);
+    return () => clearInterval(t);
+  }, [zoom]);
+
+  // load from Supabase once countries are known
+  useEffect(() => {
+    if (!countries) return;
+    let cancelled = false;
+    (async () => {
+      const { data: trips, error: e1 } = await sb.from('trips').select('id, country_name, date_from, date_to, notes');
+      if (e1) { console.error('load trips', e1); return; }
+      const { data: photos, error: e2 } = await sb.from('photos').select('id, trip_id, storage_path');
+      if (e2) { console.error('load photos', e2); return; }
+      if (cancelled) return;
+      const byName = {};
+      countries.features.forEach(f => { byName[f.properties.name] = f.properties.iso; });
+      const next = {};
+      for (const t of trips) {
+        const iso = byName[t.country_name];
+        if (!iso) continue;
+        const ph = photos.filter(p => p.trip_id === t.id).map(p => ({
+          id: p.id, storage_path: p.storage_path,
+          src: sb.storage.from(BUCKET).getPublicUrl(p.storage_path).data.publicUrl,
+        }));
+        next[iso] = {
+          country: t.country_name, tripId: t.id,
+          dateFrom: t.date_from || '', dateTo: t.date_to || '', notes: t.notes || '',
+          photos: ph, visited: true,
+        };
+      }
+      setEntries(next);
+    })();
+    return () => { cancelled = true; };
+  }, [countries]);
+
+  const visitedMap = useMemo(() => {
+    const m = {}; for (const iso in entries) if (entries[iso].visited) m[iso] = true; return m;
+  }, [entries]);
+
+  const photoMarkers = useMemo(() => {
+    if (!countries || typeof d3 === 'undefined') return [];
+    const mainCentroid = (f) => {
+      const g = f.geometry;
+      if (!g || g.type === 'Polygon') return d3.geoCentroid(f);
+      if (g.type === 'MultiPolygon') {
+        let bestArea = -1, bestPoly = null;
+        for (const coords of g.coordinates) {
+          const pf = { type: 'Feature', geometry: { type: 'Polygon', coordinates: coords } };
+          const area = d3.geoArea(pf);
+          if (area > bestArea) { bestArea = area; bestPoly = pf; }
+        }
+        return bestPoly ? d3.geoCentroid(bestPoly) : d3.geoCentroid(f);
+      }
+      return d3.geoCentroid(f);
+    };
+    const out = [];
+    for (const iso in entries) {
+      const e = entries[iso];
+      if (!e.visited || !e.photos || e.photos.length === 0) continue;
+      const f = countries.features.find(x => x.properties.iso === iso);
+      if (!f) continue;
+      try {
+        const c = mainCentroid(f);
+        out.push({ iso, lon: c[0], lat: c[1], photo: e.photos[0].src, count: e.photos.length, name: e.country || f.properties.name });
+      } catch (err) {}
+    }
+    return out;
+  }, [entries, countries]);
+
+  const visitedCount = Object.keys(visitedMap).length;
+  const photoCount = useMemo(() => { let n = 0; for (const iso in entries) n += (entries[iso].photos || []).length; return n; }, [entries]);
+
+  const handleCountryClick = useCallback((iso) => {
+    if (!countries) return;
+    const f = countries.features.find(x => x.properties.iso === iso);
+    if (!f) return;
+    setModalCountry({ iso, name: f.properties.name, feature: f });
+  }, [countries]);
+
+  const handleSave = async (data, setStatus) => {
+    const iso = modalCountry.iso;
+    const name = modalCountry.name;
+    const existing = entries[iso];
+    let tripId = existing?.tripId;
+
+    // upsert trip row
+    if (tripId) {
+      setStatus && setStatus('Updating trip…');
+      const { error } = await sb.from('trips').update({
+        date_from: data.dateFrom || null, date_to: data.dateTo || null, notes: data.notes || null,
+      }).eq('id', tripId);
+      if (error) throw error;
+    } else {
+      setStatus && setStatus('Creating trip…');
+      const { data: row, error } = await sb.from('trips').insert({
+        country_name: name, date_from: data.dateFrom || null, date_to: data.dateTo || null, notes: data.notes || null,
+      }).select('id').single();
+      if (error) throw error;
+      tripId = row.id;
+    }
+
+    // upload any pending photos
+    const finalPhotos = [];
+    let n = 0;
+    const pending = data.photos.filter(p => p.pending);
+    for (const p of data.photos) {
+      if (!p.pending) { finalPhotos.push(p); continue; }
+      n++;
+      setStatus && setStatus(`Uploading ${n} of ${pending.length}…`);
+      const path = `${tripId}/${Date.now()}-${n}.jpg`;
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, p.blob, { contentType: 'image/jpeg' });
+      if (upErr) throw upErr;
+      const { data: prow, error: insErr } = await sb.from('photos').insert({ trip_id: tripId, storage_path: path }).select('id').single();
+      if (insErr) throw insErr;
+      const url = sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      finalPhotos.push({ id: prow.id, storage_path: path, src: url });
+    }
+
+    // handle removed photos (existing photos no longer in list)
+    if (existing && existing.photos) {
+      const keptIds = new Set(data.photos.filter(p => !p.pending).map(p => p.id));
+      const removed = existing.photos.filter(p => !keptIds.has(p.id));
+      for (const r of removed) {
+        await sb.from('photos').delete().eq('id', r.id);
+        if (r.storage_path) await sb.storage.from(BUCKET).remove([r.storage_path]);
+      }
+    }
+
+    setEntries(e => ({ ...e, [iso]: {
+      country: name, tripId, dateFrom: data.dateFrom, dateTo: data.dateTo, notes: data.notes,
+      photos: finalPhotos, visited: true,
+    }}));
+    setModalCountry(null);
+  };
+
+  const handleDelete = async () => {
+    const iso = modalCountry.iso;
+    const existing = entries[iso];
+    if (!existing) { setModalCountry(null); return; }
+    if (!window.confirm(`Remove ${modalCountry.name} and its photos?`)) return;
+    if (existing.photos) {
+      const paths = existing.photos.map(p => p.storage_path).filter(Boolean);
+      if (paths.length) await sb.storage.from(BUCKET).remove(paths);
+    }
+    if (existing.tripId) await sb.from('trips').delete().eq('id', existing.tripId);
+    setEntries(e => { const next = { ...e }; delete next[iso]; return next; });
+    setModalCountry(null);
+  };
+
+  const fmtCoord = (v, pos, neg) => `${Math.abs(v).toFixed(1)}° ${v >= 0 ? pos : neg}`;
+
+  return (
+    <>
+      <Globe ref={globeRef} onCountryClick={handleCountryClick} onCountriesLoaded={setCountries}
+        visited={visitedMap} landing={landing} photoMarkers={photoMarkers} />
+
+      <div className={`chrome ${landing ? 'is-landing' : ''}`}>
+        <div className={`brand ${landing ? 'landing' : ''}`}>
+          <div className="brand-text">
+            <div className="brand-name">
+              {Array.from("Valentina's travel album").map((ch, i) => (
+                <span key={i} style={{ '--i': i }}>{ch === ' ' ? '\u00a0' : ch}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="meta-strip">
+          <div className="stat">
+            <div className="label">Countries visited</div>
+            <div className="value" style={{ color: ACCENT }}>{String(visitedCount).padStart(2, '0')}</div>
+          </div>
+          <div className="stat">
+            <div className="label">Photos</div>
+            <div className="value">{String(photoCount).padStart(2, '0')}</div>
+          </div>
+          <div className="stat">
+            <div className="label">Current location</div>
+            <div className="value" style={{ fontSize: 15, whiteSpace: 'nowrap' }}>Manhattan, NY</div>
+          </div>
+        </div>
+        <div className="footer">
+          <div className="hint">
+            <span><span className="key">drag</span> rotate</span>
+            <span><span className="key">scroll</span> zoom</span>
+            <span><span className="key">click</span> a country</span>
+          </div>
+          <div className="coords">{fmtCoord(coords[1], 'N', 'S')} &nbsp; {fmtCoord(coords[0], 'E', 'W')}</div>
+        </div>
+      </div>
+
+      {modalCountry && (
+        <CountryModal country={modalCountry} entry={entries[modalCountry.iso]}
+          onClose={() => setModalCountry(null)} onSave={handleSave} onDelete={handleDelete} />
+      )}
+
+      {zoom > 1.35 && (
+        <div className="zoom-indicator">
+          <button className="zoom-btn" onClick={() => globeRef.current?.resetZoom?.()} title="Reset zoom">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8 V3 H8" /><path d="M21 8 V3 H16" /><path d="M3 16 V21 H8" /><path d="M21 16 V21 H16" /></svg>
+          </button>
+          <div className="zoom-value">{zoom.toFixed(1)}×</div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
 </script>
 </body>
 </html>
