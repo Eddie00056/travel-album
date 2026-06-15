@@ -56,9 +56,10 @@
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.0/dist/d3-geo.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-array@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-geo@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ---- Supabase setup ----
 const SUPABASE_URL = 'https://vcgugbclnkezvmxvltkf.supabase.co';
@@ -113,6 +114,14 @@ let dotGeo = null;
 const dotCountry = [];
 
 async function build() {
+  // Verify all CDN libraries actually loaded before using them
+  const missing = [];
+  if (typeof THREE === 'undefined') missing.push('three.js');
+  if (typeof d3 === 'undefined' || typeof d3.geoContains !== 'function') missing.push('d3-geo');
+  if (typeof topojson === 'undefined') missing.push('topojson-client');
+  if (typeof window.supabase === 'undefined') missing.push('supabase-js');
+  if (missing.length) throw new Error('Library failed to load: ' + missing.join(', ') + '. Likely a network/CDN block.');
+
   const resp = await fetch('countries.json');
   if (!resp.ok) throw new Error('Could not load countries.json (HTTP ' + resp.status + ')');
   const topo = await resp.json();
