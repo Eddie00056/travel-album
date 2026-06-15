@@ -181,7 +181,7 @@ async function loadTripsFromSupabase() {
       .map(p => ({
         id: p.id,
         storage_path: p.storage_path,
-        url: sb.storage.from('photos').getPublicUrl(p.storage_path).data.publicUrl
+        url: sb.storage.from('Globe Photos').getPublicUrl(p.storage_path).data.publicUrl
       }));
     trips[t.country_name] = { id: t.id, photos };
     setCountry(t.country_name, true);
@@ -267,11 +267,11 @@ function openModal(name){
         statusEl.textContent = 'Uploading '+(i+1)+' of '+files.length+'...';
         const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
         const path = tripId + '/' + Date.now() + '-' + i + '.' + ext;
-        const { error: upErr } = await sb.storage.from('photos').upload(path, file, { contentType: file.type });
+        const { error: upErr } = await sb.storage.from('Globe Photos').upload(path, file, { contentType: file.type });
         if (upErr) throw upErr;
         const { data: photoRow, error: insErr } = await sb.from('photos').insert({ trip_id: tripId, storage_path: path }).select('id').single();
         if (insErr) throw insErr;
-        const url = sb.storage.from('photos').getPublicUrl(path).data.publicUrl;
+        const url = sb.storage.from('Globe Photos').getPublicUrl(path).data.publicUrl;
         trips[name].photos.push({ id: photoRow.id, storage_path: path, url });
       }
       setCountry(name, true);
